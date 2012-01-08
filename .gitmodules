@@ -1,0 +1,3 @@
+[submodule "extensions/Sortable"]
+	path = extensions/Sortable
+	url = git@github.com:commi/doctrine-sortable.git
