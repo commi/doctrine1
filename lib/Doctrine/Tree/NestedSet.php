@@ -122,13 +122,16 @@ class Doctrine_Tree_NestedSet extends Doctrine_Tree implements Doctrine_Tree_Int
      * @todo Better $rootid = null and exception if $rootId == null && hasManyRoots?
      *       Fetching with id = 1 is too magical and cant work reliably anyway.
      */
-    public function fetchRoot($rootId = 1)
+    public function fetchRoot($rootId = null)
     {
         $q = $this->getBaseQuery();
         $q = $q->addWhere($this->_baseAlias . '.lft = ?', 1);
 
         // if tree has many roots, then specify root id
-        $q = $this->returnQueryWithRootId($q, $rootId);
+        if(!is_null($rootId))
+            $q = $this->returnQueryWithRootId($q, $rootId);
+        else
+            $q->limit(1);
         $data = $q->execute();
 
         if (count($data) <= 0) {
@@ -165,7 +168,7 @@ class Doctrine_Tree_NestedSet extends Doctrine_Tree implements Doctrine_Tree_Int
         $q->addWhere($this->_baseAlias . ".lft >= ?", 1);
 
         // if tree has many roots, then specify root id
-        $rootId = isset($options['root_id']) ? $options['root_id'] : '1';
+        $rootId = isset($options['root_id']) ? $options['root_id'] : null;
         if (is_array($rootId)) {
             $q->addOrderBy($this->_baseAlias . "." . $this->getAttribute('rootColumnName') .
                     ", " . $this->_baseAlias . ".lft ASC");
@@ -173,11 +176,12 @@ class Doctrine_Tree_NestedSet extends Doctrine_Tree implements Doctrine_Tree_Int
             $q->addOrderBy($this->_baseAlias . ".lft ASC");
         }
 
-        if ( ! is_null($depth)) { 
-            $q->addWhere($this->_baseAlias . ".level BETWEEN ? AND ?", array(0, $depth)); 
+        if ( ! is_null($depth)) {
+            $q->addWhere($this->_baseAlias . ".level BETWEEN ? AND ?", array(0, $depth));
         }
 
-        $q = $this->returnQueryWithRootId($q, $rootId);
+        if(!is_null($rootId))
+            $q = $this->returnQueryWithRootId($q, $rootId);
 
         $tree = $q->execute(array(), $hydrationMode);
 
