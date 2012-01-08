@@ -1302,11 +1302,15 @@ abstract class Doctrine_Query_Abstract
      */
     public function andWhere($where, $params = array())
     {
-        if (is_array($params)) {
-            $this->_params['where'] = array_merge($this->_params['where'], $params);
-        } else {
-            $this->_params['where'][] = $params;
+    	if (!is_array($params)) {
+    		$params = array($params);
+    	}
+		foreach ($params as $key=>$val){
+        	if ($val instanceof DateTime) {
+        		$params[$key] = $val->format("Y-m-d H:i:s");
+        	}
         }
+    	$this->_params['where'] = array_merge($this->_params['where'], $params);
 
         if ($this->_hasDqlQueryPart('where')) {
             $this->_addDqlQueryPart('where', 'AND', true);
@@ -1327,11 +1331,15 @@ abstract class Doctrine_Query_Abstract
      */
     public function orWhere($where, $params = array())
     {
-        if (is_array($params)) {
-            $this->_params['where'] = array_merge($this->_params['where'], $params);
-        } else {
-            $this->_params['where'][] = $params;
+    	if (!is_array($params)) {
+    		$params = array($params);
+    	}
+		foreach ($params as $key=>$val){
+        	if ($val instanceof DateTime) {
+        		$params[$key] = $val->format("Y-m-d H:i:s");
+        	}
         }
+    	$this->_params['where'] = array_merge($this->_params['where'], $params);
 
         if ($this->_hasDqlQueryPart('where')) {
             $this->_addDqlQueryPart('where', 'OR', true);
