@@ -48,7 +48,7 @@ class Doctrine_Ticket_DC841_TestCase extends Doctrine_UnitTestCase
     
     public function testSelect()
     {
-        Doctrine_Core::getTable('Ticket_DC841_Model')
+        Doctrine::getTable('Ticket_DC841_Model')
             ->createQuery('t')
             ->where('t.username <> ?', 'foo')
             ->andWhere('t.foo = ?', 't.foo = ?')
@@ -64,7 +64,7 @@ class Doctrine_Ticket_DC841_TestCase extends Doctrine_UnitTestCase
     
     public function testSelectJoinWith()
     {
-        Doctrine_Core::getTable('Ticket_DC841_Model')
+        Doctrine::getTable('Ticket_DC841_Model')
             ->createQuery('t')
             ->leftJoin('t.Ticket_DC841_Model WITH t.id = ?', array(30))
             ->where('t.username = ?', 'foo')
@@ -79,7 +79,7 @@ class Doctrine_Ticket_DC841_TestCase extends Doctrine_UnitTestCase
     public function testSelectWithStaticParameter()
     {
         return; // doesn't work
-        Doctrine_Core::getTable('Ticket_DC841_Model')
+        Doctrine::getTable('Ticket_DC841_Model')
             ->createQuery('t')
             ->where('t.username = ?', 'foo')
             ->andWhere("t.foo = 't.foo = ?'")
@@ -94,7 +94,7 @@ class Doctrine_Ticket_DC841_TestCase extends Doctrine_UnitTestCase
     
     public function testSelectWithIn()
     {
-        Doctrine_Core::getTable('Ticket_DC841_Model')
+        Doctrine::getTable('Ticket_DC841_Model')
             ->createQuery('t')
             ->whereIn('t.username', array('foo', 'bar'))
             ->execute();
