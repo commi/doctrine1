@@ -266,6 +266,8 @@ class Doctrine_Inflector
 
         // Remove all none word characters
         $text = preg_replace('/\W/', ' ', $text);
+        // remove soft hyphens
+        $text = str_replace("\xC2\cAD", '', $text);
 
         // More stripping. Replace spaces with dashes
         $text = strtolower(preg_replace('/[^A-Z^a-z^0-9^\/]+/', '-',
