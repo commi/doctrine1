@@ -201,7 +201,7 @@ class Doctrine_Connection_Mysql extends Doctrine_Connection_Common
         $values = array();
         $params = array();
         foreach ($fields as $fieldName => $value) {
-            $columns[] = $table->getColumnName($fieldName);
+            $columns[] = $this->quoteIdentifier($table->getColumnName($fieldName));
             $values[] = '?';
             $params[] = $value;
         }
