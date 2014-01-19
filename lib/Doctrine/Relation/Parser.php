@@ -417,7 +417,7 @@ class Doctrine_Relation_Parser
         $foreignIdColumnName = array_pop($foreignIdentifierColumnNames);
 
         if (isset($def['local'])) {
-            $def['local'] = $def['localTable']->getColumnName($def['local']);
+            //$def['local'] = $def['localTable']->getColumnName($def['local']);
 
             if ( ! isset($def['foreign'])) {
                 // local key is set, but foreign key is not
@@ -432,7 +432,7 @@ class Doctrine_Relation_Parser
                     $def['localKey'] = true;
                 }
             } else {
-                $def['foreign'] = $def['table']->getColumnName($def['foreign']);
+                //$def['foreign'] = $def['table']->getColumnName($def['foreign']);
 
                 if ($localIdentifierCount == 1) {
                     if ($def['local'] == $localIdColumnName && isset($def['owningSide'])
