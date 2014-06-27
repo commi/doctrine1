@@ -1015,7 +1015,7 @@ class Doctrine_Table extends Doctrine_Configurable implements Countable, Seriali
     /**
      * Retrieves all relation objects defined on this table.
      *
-     * @return array
+     * @return array|Doctrine_Relation[]
      */
     public function getRelations()
     {
