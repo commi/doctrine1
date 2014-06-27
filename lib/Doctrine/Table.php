@@ -2365,12 +2365,17 @@ class Doctrine_Table extends Doctrine_Configurable implements Countable, Seriali
                 case 'array':
                 case 'object':
                     if (is_string($value)) {
-                        $value = empty($value) ? null:unserialize($value);
+                        $array = empty($value) ? null:unserialize($value);
 
-                        if ($value === false) {
+	                    // value doenst seem to be a php-serialized string
+                        if ($array === false AND !preg_match('/[\}\]]$/', $value)) {
+	                        $array = ($type == 'array') ? (array)$value : (object)$value;
+                        }
+
+                        if ($array === false) {
                             throw new Doctrine_Table_Exception('Unserialization of ' . $fieldName . ' failed.');
                         }
-                        return $value;
+                        return $array;
                     }
                 break;
                 case 'gzip':
