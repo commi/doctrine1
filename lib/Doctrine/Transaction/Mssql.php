@@ -71,7 +71,14 @@ class Doctrine_Transaction_Mssql extends Doctrine_Transaction
      */
     protected function _doRollback()
     {
-        $this->conn->getDbh()->exec('ROLLBACK TRANSACTION');
+	    try
+	    {
+		    $this->conn->getDbh()->exec('ROLLBACK TRANSACTION');
+	    }
+	    catch(PDOException $e)
+	    {
+		    // Catch PDO-Exception because SQL-Server Aborts transaction in case of error, and a rollback would produce a follow-up error, that would mask the previous error.
+	    }
     }
     
     /**

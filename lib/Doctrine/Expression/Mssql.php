@@ -67,6 +67,20 @@ class Doctrine_Expression_Mssql extends Doctrine_Expression_Driver
     }
 
     /**
+     * locate
+     * returns the position of the first occurrence of substring $substr in string $str
+     *
+     * @param string $substr literal string to find
+     * @param string $str literal string
+     *
+     * @return integer
+     */
+    public function locate($str, $substr)
+    {
+        return 'CHARINDEX(CAST(' . $substr . ' AS NVARCHAR(max)), ' . $str . ')';
+    }
+
+    /**
      * Returns string to concatenate two or more string parameters
      *
      * @param string $arg1
@@ -131,5 +145,20 @@ class Doctrine_Expression_Mssql extends Doctrine_Expression_Driver
         $datepart = str_replace(array('\'', '"'), '', $datepart);
 
         return 'DATEPART(' . $datepart . ', ' . $date . ')';
+    }
+
+    /**
+     * Aliases IFNULL to ISNULL
+     *
+     * @param string $arg1
+     * @param string $arg2
+     *
+     * @return string
+     */
+    public function ifnull()
+    {
+        $args = func_get_args();
+
+        return 'ISNULL(' . implode(', ', $args) . ')';
     }
 }

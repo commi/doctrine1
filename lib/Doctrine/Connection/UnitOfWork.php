@@ -94,7 +94,7 @@ class Doctrine_Connection_UnitOfWork extends Doctrine_Connection_Module
                         break;
                 }
 
-                $aliasesUnlinkInDb = array();
+                $aliasesUnlinkInDb = [];
 
                 if ($isValid) {
                     // NOTE: what about referential integrity issues?
@@ -104,7 +104,7 @@ class Doctrine_Connection_UnitOfWork extends Doctrine_Connection_Module
                 
                     foreach ($record->getPendingUnlinks() as $alias => $ids) {
                         if ($ids === false) {
-                            $record->unlinkInDb($alias, array());
+                            $record->unlinkInDb($alias, []);
                             $aliasesUnlinkInDb[] = $alias;
                         } else if ($ids) {
                             $record->unlinkInDb($alias, array_keys($ids));
@@ -168,7 +168,7 @@ class Doctrine_Connection_UnitOfWork extends Doctrine_Connection_Module
      */
     public function delete(Doctrine_Record $record)
     {
-        $deletions = array();
+        $deletions = [];
         $this->_collectDeletions($record, $deletions);
         return $this->_executeDeletions($deletions);
     }
@@ -198,7 +198,7 @@ class Doctrine_Connection_UnitOfWork extends Doctrine_Connection_Module
     private function _executeDeletions(array $deletions)
     {
         // collect class names
-        $classNames = array();
+        $classNames = [];
         foreach ($deletions as $record) {
             $classNames[] = $record->getTable()->getComponentName();
         }
@@ -216,8 +216,8 @@ class Doctrine_Connection_UnitOfWork extends Doctrine_Connection_Module
                 $table = $this->conn->getTable($className);
 
                 // collect identifiers
-                $identifierMaps = array();
-                $deletedRecords = array();
+                $identifierMaps = [];
+                $deletedRecords = [];
                 foreach ($deletions as $oid => $record) {
                     if ($record->getTable()->getComponentName() == $className) {
                         $veto = $this->_preDelete($record);
@@ -366,7 +366,7 @@ class Doctrine_Connection_UnitOfWork extends Doctrine_Connection_Module
      */
     public function saveRelatedForeignKeys(Doctrine_Record $record)
     {
-        $saveLater = array();
+        $saveLater = [];
         foreach ($record->getReferences() as $k => $v) {
             $rel = $record->getTable()->getRelation($k);
             if ($rel instanceof Doctrine_Relation_ForeignKey) {
@@ -451,7 +451,7 @@ class Doctrine_Connection_UnitOfWork extends Doctrine_Connection_Module
                            . ' WHERE ' . $rel->getForeignRefColumnName() . ' = ?'
                            . ' AND ' . $rel->getLocalRefColumnName() . ' = ?';
 
-                    $this->conn->execute($query, array($r->getIncremented(), $record->getIncremented()));
+                    $this->conn->execute($query, [$r->getIncremented(), $record->getIncremented()]);
                 }
 
                 foreach ($v->getInsertDiff() as $r) {
@@ -663,7 +663,7 @@ class Doctrine_Connection_UnitOfWork extends Doctrine_Connection_Module
     {
         // determine classes to order. only necessary because the $tables param
         // can contain strings or table objects...
-        $classesToOrder = array();
+        $classesToOrder = [];
         foreach ($tables as $table) {
             if ( ! ($table instanceof Doctrine_Table)) {
                 $table = $this->conn->getTable($table, false);
@@ -677,7 +677,7 @@ class Doctrine_Connection_UnitOfWork extends Doctrine_Connection_Module
         }
 
         // build the correct order
-        $flushList = array();
+        $flushList = [];
         foreach ($classesToOrder as $class) {
             $table = $this->conn->getTable($class, false);
             $currentClass = $table->getComponentName();
@@ -878,17 +878,17 @@ class Doctrine_Connection_UnitOfWork extends Doctrine_Connection_Module
     private function _formatDataSet(Doctrine_Record $record)
     {
         $table = $record->getTable();
-        $dataSet = array();
+        $dataSet = [];
         $component = $table->getComponentName();
         $array = $record->getPrepared();
 
         foreach ($table->getColumns() as $columnName => $definition) {
             if ( ! isset($dataSet[$component])) {
-                $dataSet[$component] = array();
+                $dataSet[$component] = [];
             }
 
             if ( isset($definition['owner']) && ! isset($dataSet[$definition['owner']])) {
-                $dataSet[$definition['owner']] = array();
+                $dataSet[$definition['owner']] = [];
             }
 
             $fieldName = $table->getFieldName($columnName);

@@ -47,7 +47,7 @@ class Doctrine_Connection_Mssql extends Doctrine_Connection_Common
     public function __construct(Doctrine_Manager $manager, $adapter)
     {
         // initialize all driver options
-        $this->supported = array(
+        $this->supported = [
                           'sequences'             => 'emulated',
                           'indexes'               => true,
                           'affected_rows'         => true,
@@ -63,9 +63,15 @@ class Doctrine_Connection_Mssql extends Doctrine_Connection_Common
                           'primary_key'           => true,
                           'result_introspection'  => true,
                           'prepared_statements'   => 'emulated',
-                          );
+                          ];
 
         $this->properties['varchar_max_length'] = 8000;
+
+		    // Microsofts sqlsrv-driver supports prepared statements
+		    if(($adapter instanceof PDO) AND $adapter->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlsrv')
+		    {
+			    $this->supported['prepared_statements'] = true;
+		    }
 
         parent::__construct($manager, $adapter);
     }
@@ -115,9 +121,33 @@ class Doctrine_Connection_Mssql extends Doctrine_Connection_Common
      */
     public function modifyLimitQuery($query, $limit = false, $offset = false, $isManip = false, $isSubQuery = false, Doctrine_Query $queryOrigin = null)
     {
-        if ($limit === false || !($limit > 0)) {
+        if($limit === false || !($limit > 0))
+        {
             return $query;
         }
+
+        /**
+         * OFFSET emulation is not neccesary in SQL Server 2012
+         */
+        if($this->getServerVersion()['major'] >= 11)
+        {
+            $count  = intval($limit);
+            $offset = intval($offset);
+
+            if(($queryOrigin AND !$queryOrigin->getSqlQueryPart('orderby')) OR (!$queryOrigin AND stristr($query, 'ORDER BY') === false))
+            {
+                $query .= " ORDER BY 1";
+            }
+
+            $query .= " OFFSET $offset ROWS";
+            if($count)
+            {
+                $query .= " FETCH NEXT $count ROWS ONLY";
+            }
+
+            return $query;
+        }
+
 
         $orderby = stristr($query, 'ORDER BY');
 
@@ -132,36 +162,97 @@ class Doctrine_Connection_Mssql extends Doctrine_Connection_Common
             throw new Doctrine_Connection_Exception("LIMIT argument offset=$offset is not valid");
         }
 
-        if ($offset == 0) {
-            $query = preg_replace('/^SELECT\s/i', 'SELECT TOP ' . $limit . ' ', $query);
+	    if($queryOrigin)
+	    {
+		    $orderbySql = $queryOrigin->getSqlQueryPart('orderby');
+		    $orderbyDql = $queryOrigin->getDqlPart('orderby');
+	    }
 
-        } else {
-            $over = stristr($query, 'ORDER BY');
+	    if($queryOrigin AND ($orderby !== false))
+	    {
+		    $orders = $this->parseOrderBy(implode(', ', $queryOrigin->getDqlPart('orderby')));
 
-            if (!$over) {
-                $over = 'ORDER BY (SELECT 0)';
-            } else {
-                // Remove ORDER BY clause from $query
-                $query = stristr($query, 'ORDER BY', true);
-            }
+		    for($i = 0; $i < count($orders); $i++)
+		    {
+			    $sorts[$i]  = (stripos($orders[$i], ' desc') !== false) ? 'DESC' : 'ASC';
+			    $orders[$i] = trim(preg_replace('/\s+(ASC|DESC)$/i', '', $orders[$i]));
 
-            // Remove the first SELECT from query
-            $query = substr($query, strlen('SELECT '));
-            $select = 'SELECT';
+			    list($fieldAliases[$i], $fields[$i]) = strstr($orders[$i], '.') ? explode('.', $orders[$i]) : ['', $orders[$i]];
+			    $columnAlias[$i] = $queryOrigin->getSqlTableAlias($queryOrigin->getExpressionOwner($orders[$i]));
 
-            if (0 === strpos($query, 'DISTINCT'))
-            {
-              $query = substr($query, strlen('DISTINCT '));
-              $select .= ' DISTINCT';
-            }
+			    $cmp         = $queryOrigin->getQueryComponent($queryOrigin->getExpressionOwner($orders[$i]));
+			    $tables[$i]  = $cmp['table'];
+			    $columns[$i] = $cmp['table']->getColumnName($fields[$i]);
 
-            $start = $offset + 1;
-            $end = $offset + $limit;
+			    // TODO: This sould be refactored as method called Doctrine_Table::getColumnAlias(<column name>).
+			    $aliases[$i] = $columnAlias[$i] . '__' . $columns[$i];
+		    }
+	    }
 
-            $query = "SELECT * FROM ($select ROW_NUMBER() OVER ($over) AS [DOCTRINE_ROWNUM], $query) AS [doctrine_tbl] WHERE [DOCTRINE_ROWNUM] BETWEEN $start AND $end";
-        }
+	    // Ticket #1259: Fix for limit-subquery in MSSQL
+	    $selectRegExp  = 'SELECT\s+';
+	    $selectReplace = 'SELECT ';
 
-        return $query;
+	    if(preg_match('/^SELECT(\s+)DISTINCT/i', $query))
+	    {
+		    $selectRegExp  .= 'DISTINCT\s+';
+		    $selectReplace .= 'DISTINCT ';
+	    }
+
+	    $fields_string = substr($query, strlen($selectReplace), strpos($query, ' FROM ') - strlen($selectReplace));
+	    $field_array   = explode(',', $fields_string);
+	    $field_array   = array_shift($field_array);
+	    $aux2          = preg_split('/ as /i', $field_array);
+	    $aux2          = explode('.', end($aux2));
+	    $key_field     = trim(end($aux2));
+
+	    $query = preg_replace('/^' . $selectRegExp . '/i', $selectReplace . 'TOP ' . ($count + $offset) . ' ', $query);
+
+	    if($isSubQuery === true)
+	    {
+		    $query = 'SELECT TOP ' . $count . ' ' . $this->quoteIdentifier('inner_tbl') . '.' . $key_field . ' FROM (' . $query . ') AS ' . $this->quoteIdentifier('inner_tbl');
+	    }
+	    else
+	    {
+		    $query = 'SELECT * FROM (SELECT TOP ' . $count . ' * FROM (' . $query . ') AS ' . $this->quoteIdentifier('inner_tbl');
+	    }
+	    if(!empty($orders) AND $orderby !== false)
+	    {
+		    $query .= ' ORDER BY ';
+
+		    for($i = 0, $l = count($orders); $i < $l; $i++)
+		    {
+			    if($i > 0)
+			    { // not first order clause
+				    $query .= ', ';
+			    }
+
+			    $query .= $this->modifyOrderByColumn($tables[$i], $columns[$i], $this->quoteIdentifier('inner_tbl') . '.' . $this->quoteIdentifier($aliases[$i])) . ' ';
+			    $query .= (stripos($sorts[$i], 'asc') !== false) ? 'DESC' : 'ASC';
+		    }
+	    }
+
+	    if($isSubQuery !== true)
+	    {
+		    $query .= ') AS ' . $this->quoteIdentifier('outer_tbl');
+
+		    if(!empty($orders) AND $orderby !== false)
+		    {
+			    $query .= ' ORDER BY ';
+
+			    for($i = 0, $l = count($orders); $i < $l; $i++)
+			    {
+				    if($i > 0)
+				    { // not first order clause
+					    $query .= ', ';
+				    }
+
+				    $query .= $this->modifyOrderByColumn($tables[$i], $columns[$i], $this->quoteIdentifier('outer_tbl') . '.' . $this->quoteIdentifier($aliases[$i])) . ' ' . $sorts[$i];
+			    }
+		    }
+	    }
+
+	    return $query;
     }
 
 
@@ -172,9 +263,9 @@ class Doctrine_Connection_Mssql extends Doctrine_Connection_Common
      */
     private function parseOrderBy($orderby)
     {
-        $matches = array();
-        $chunks  = array();
-        $tokens  = array();
+        $matches = [];
+        $chunks  = [];
+        $tokens  = [];
         $parsed  = str_ireplace('ORDER BY', '', $orderby);
 
         preg_match_all('/(\w+\(.+?\)\s+(ASC|DESC)),?/', $orderby, $matches);
@@ -245,21 +336,21 @@ class Doctrine_Connection_Mssql extends Doctrine_Connection_Common
         $this->serverInfo = $serverInfo;
         if ( ! $native) {
             if (preg_match('/([0-9]+)\.([0-9]+)\.([0-9]+)/', $serverInfo, $tmp)) {
-                $serverInfo = array(
+                $serverInfo = [
                     'major' => $tmp[1],
                     'minor' => $tmp[2],
                     'patch' => $tmp[3],
                     'extra' => null,
                     'native' => $serverInfo,
-                );
+                ];
             } else {
-                $serverInfo = array(
+                $serverInfo = [
                     'major' => null,
                     'minor' => null,
                     'patch' => null,
                     'extra' => null,
                     'native' => $serverInfo,
-                );
+                ];
             }
         }
         return $serverInfo;
@@ -293,13 +384,21 @@ class Doctrine_Connection_Mssql extends Doctrine_Connection_Common
      *
      * @return PDOStatement|Doctrine_Adapter_Statement
      */
-    public function execute($query, array $params = array())
+    public function execute($query, array $params = [])
     {
-        if(! empty($params)) {
+	    if($this->supported['prepared_statements'])
+	    {
+		    return parent::execute($query, $params);
+	    }
+	    else
+	    {
+		    if(!empty($params))
+		    {
             $query = $this->replaceBoundParamsWithInlineValuesInQuery($query, $params);
         }
 
-        return parent::execute($query, array());
+		    return parent::execute($query, []);
+	    }
     }
 
     /**
@@ -309,14 +408,22 @@ class Doctrine_Connection_Mssql extends Doctrine_Connection_Common
      *
      * @return PDOStatement|Doctrine_Adapter_Statement
      */
-    public function exec($query, array $params = array())
-    {
-        if(! empty($params)) {
-            $query = $this->replaceBoundParamsWithInlineValuesInQuery($query, $params);
-        }
+		public function exec($query, array $params = [])
+		{
+			if($this->supported['prepared_statements'])
+			{
+				return parent::exec($query, $params);
+			}
+			else
+			{
+				if(!empty($params))
+				{
+					$query = $this->replaceBoundParamsWithInlineValuesInQuery($query, $params);
+				}
 
-        return parent::exec($query, array());
-    }
+				return parent::exec($query, []);
+			}
+		}
 
     /**
      * Replaces bound parameters and their placeholders with explicit values.
@@ -374,7 +481,7 @@ class Doctrine_Connection_Mssql extends Doctrine_Connection_Common
 
             $id = $this->lastInsertId($table->getTableName());
 
-            return $this->update($table, $fields, array($id));
+            return $this->update($table, $fields, [$id]);
         }
 
         return parent::insert($table, $fields);
