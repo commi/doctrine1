@@ -2373,11 +2373,18 @@ class Doctrine_Table extends Doctrine_Configurable implements Countable, Seriali
 			            if(is_string($value))
 			            {
 				            // unhex values from database, workaround for buggy ms sql driver
-				            if(preg_match('/^[A-F0-9]{2,}$/', $value))
+				            if(strtolower($this->_conn->getDriverName()) == 'mssql' AND preg_match('/^[A-F0-9]{2,}$/', $value))
 				            {
 					            $value = hex2bin($value);
 				            }
 				            $array = empty($value) ? null : unserialize($value);
+
+				            // value doenst seem to be a php-serialized but coul not be read
+				            if($array === false AND preg_match('/[\}\]]$/', $value))
+				            {
+					            require_once('classes/Encoding.php');
+					            $array = unserialize(\ForceUTF8\Encoding::fixUTF8($value));
+				            }
 
 				            // value doenst seem to be a php-serialized string
 				            if($array === false AND !preg_match('/[\}\]]$/', $value))
@@ -2387,13 +2394,26 @@ class Doctrine_Table extends Doctrine_Configurable implements Countable, Seriali
 
 				            if($array === false)
 				            {
-					            throw new Doctrine_Table_Exception('Unserialization of ' . $fieldName . ' failed.');
+				            	// FIXME wieder aktiveren
+					            #throw new Doctrine_Table_Exception('Unserialization of ' . $fieldName . ' failed.');
 				            }
 
 				            return $array;
 			            }
 	              break;
+                case 'blob':
+			            // unhex values from database, workaround for buggy ms sql driver
+			            if(strtolower($this->_conn->getDriverName()) == 'mssql' AND preg_match('/^[A-F0-9]{2,}$/', $value))
+			            {
+				            $value = hex2bin($value);
+			            }
+	              break;
                 case 'gzip':
+				            // unhex values from database, workaround for buggy ms sql driver
+				            if(strtolower($this->_conn->getDriverName()) == 'mssql' AND preg_match('/^[A-F0-9]{2,}$/', $value))
+				            {
+					            $value = hex2bin($value);
+				            }
                     $value = gzuncompress($value);
 
                     if ($value === false) {

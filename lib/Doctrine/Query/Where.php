@@ -81,7 +81,7 @@ class Doctrine_Query_Where extends Doctrine_Query_Condition
                 // @TODO apply database dependent parsing
                 //       list($leftExpr, $operator, $rightExpr) = $conn->modifyWhereCondition($leftExpr, $operator, $rightExpr);
                 $driverName = strtolower($conn->getDriverName());
-                if ($driverName == 'mssql' && !empty($reference)) {
+                if ($driverName == 'mssql' && !empty($reference) && strtoupper($operator) != 'IN') {
                     $cmp = $this->query->getQueryComponent($reference);
                     $table = $cmp['table'];
 

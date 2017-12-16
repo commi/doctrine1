@@ -157,4 +157,16 @@ class Doctrine_Expression_Mysql extends Doctrine_Expression_Driver
     {
         return 'SOUNDEX(' . $column . ')';
     }
+
+		/**
+		 * Aliases IIF to IF
+		 *
+		 * @return string
+		 */
+		public function iif()
+		{
+			$args = func_get_args();
+
+			return 'IF(' . implode(', ', $args) . ')';
+		}
 }

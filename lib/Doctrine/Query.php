@@ -1282,8 +1282,12 @@ class Doctrine_Query extends Doctrine_Query_Abstract implements Countable
             // what about composite keys?
             $idColumnName = $table->getColumnName($table->getIdentifier());
 
+		        // query caching does not preserve the correct dupliceted params for the limit-subquery
+		        $this->useQueryCache(false);
+
             switch (strtolower($this->_conn->getDriverName())) {
                 case 'mysql':
+                case 'mssql':
                     $this->useQueryCache(false);
 
                     // mysql doesn't support LIMIT in subqueries

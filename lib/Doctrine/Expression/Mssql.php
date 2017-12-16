@@ -52,6 +52,10 @@ class Doctrine_Expression_Mssql extends Doctrine_Expression_Driver
                 return 'GETDATE()';
         }
     }
+    public function curdate()
+    {
+        return 'CAST(GETDATE() AS DATE)';
+    }
 
     /**
      * return string to call a function to get a substring inside an SQL statement
@@ -75,23 +79,16 @@ class Doctrine_Expression_Mssql extends Doctrine_Expression_Driver
      *
      * @return integer
      */
-    public function locate($str, $substr)
+    public function locate($str, $substr, $start = null)
     {
+    	if(is_null($start))
         return 'CHARINDEX(CAST(' . $substr . ' AS NVARCHAR(max)), ' . $str . ')';
+    	else
+    		return 'CHARINDEX(CAST(' . $substr . ' AS NVARCHAR(max)), ' . $str . ', ' . $start . ')';
     }
-
-    /**
-     * Returns string to concatenate two or more string parameters
-     *
-     * @param string $arg1
-     * @param string $arg2
-     * @param string $values...
-     * @return string to concatenate two strings
-     */
-    public function concat()
+    public function instr($str, $substr, $start = null)
     {
-        $args = func_get_args();
-        return '(' . implode(' + ', $args) . ')';
+        return $this->locate($str, $substr, $start);
     }
 
     /**
@@ -161,4 +158,17 @@ class Doctrine_Expression_Mssql extends Doctrine_Expression_Driver
 
         return 'ISNULL(' . implode(', ', $args) . ')';
     }
+
+
+    public function trim($str)
+    {
+	    return 'LTRIM(RTRIM(' . $str . '))';
+    }
+
+	public function date_add($date, $intervalstr)
+	{
+		$m = [];
+		preg_match('~INTERVAL\s+(.+)\s+([a-zA-Z]+)$~i', trim($intervalstr), $m);
+		return "DATEADD(${m[2]}, ${m[1]}, $date)";
+	}
 }
