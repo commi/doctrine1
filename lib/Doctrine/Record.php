@@ -1858,6 +1858,15 @@ abstract class Doctrine_Record extends Doctrine_Record_Abstract implements Count
             }
         }
 
+		    // saveguard againt saving OID as foreign-key
+		    foreach($a as $field => $value)
+		    {
+			    if($value instanceof Doctrine_Record)
+			    {
+				    throw new Doctrine_Record_Exception("Trying to save Record as Value in '$field'");
+			    }
+		    }
+
         return $a;
     }
 
