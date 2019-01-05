@@ -2356,7 +2356,12 @@ class Doctrine_Table extends Doctrine_Configurable implements Countable, Seriali
         } else {
             $type = is_null($typeHint) ? $this->getTypeOf($fieldName) : $typeHint;
 
-            switch ($type) {
+	        /**
+	         * check if this is SQL Server
+	         */
+	        $is_ms_sql_server = strtolower($this->_conn->getDriverName()) == 'mssql';
+
+	        switch ($type) {
                 case 'enum':
                 case 'integer':
                 case 'string';
@@ -2373,17 +2378,22 @@ class Doctrine_Table extends Doctrine_Configurable implements Countable, Seriali
 			            if(is_string($value))
 			            {
 				            // unhex values from database, workaround for buggy ms sql driver
-				            if(strtolower($this->_conn->getDriverName()) == 'mssql' AND preg_match('/^[A-F0-9]{2,}$/', $value))
+				            if($is_ms_sql_server AND preg_match('/^[A-F0-9]{2,}$/', $value))
 				            {
 					            $value = hex2bin($value);
 				            }
 				            $array = empty($value) ? null : unserialize($value);
 
-				            // value doenst seem to be a php-serialized but coul not be read
+				            // value does seem to be a php-serialized string but coul not be read, try fixing the encoding
 				            if($array === false AND preg_match('/[\}\]]$/', $value))
 				            {
 					            require_once('classes/Encoding.php');
 					            $array = unserialize(\ForceUTF8\Encoding::fixUTF8($value));
+				            }
+				            // twice encoded UTF16->UTF-8 (WTF?), seen with PDO and SQLSRV, when saving raw binary to NVARCHAR this can happen, but should not be done
+				            if($is_ms_sql_server AND $array === false)
+				            {
+					            $array = unserialize(mb_convert_encoding($value, 'UTF-16LE', 'UTF-8'));
 				            }
 
 				            // value doenst seem to be a php-serialized string
@@ -2394,7 +2404,7 @@ class Doctrine_Table extends Doctrine_Configurable implements Countable, Seriali
 
 				            if($array === false)
 				            {
-				            	// FIXME wieder aktiveren
+					            // FIXME wieder aktiveren
 					            #throw new Doctrine_Table_Exception('Unserialization of ' . $fieldName . ' failed.');
 				            }
 
@@ -2403,14 +2413,14 @@ class Doctrine_Table extends Doctrine_Configurable implements Countable, Seriali
 	              break;
                 case 'blob':
 			            // unhex values from database, workaround for buggy ms sql driver
-			            if(strtolower($this->_conn->getDriverName()) == 'mssql' AND preg_match('/^[A-F0-9]{2,}$/', $value))
+			            if($is_ms_sql_server AND preg_match('/^[A-F0-9]{2,}$/', $value))
 			            {
 				            $value = hex2bin($value);
 			            }
 	              break;
                 case 'gzip':
 				            // unhex values from database, workaround for buggy ms sql driver
-				            if(strtolower($this->_conn->getDriverName()) == 'mssql' AND preg_match('/^[A-F0-9]{2,}$/', $value))
+				            if($is_ms_sql_server AND preg_match('/^[A-F0-9]{2,}$/', $value))
 				            {
 					            $value = hex2bin($value);
 				            }
