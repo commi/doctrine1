@@ -1833,22 +1833,38 @@ abstract class Doctrine_Record extends Doctrine_Record_Abstract implements Count
                 case 'object':
                     $a[$field] = serialize($this->_data[$field]);
 
-										// if we save nairy data, wrap, mark it
-	                  if($driverName === 'mssql' AND is_string($a[$field])) $a[$field]= new \App\DoctrineLob($a[$field]);
+				            $def = $this->_table->getDefinitionOf($field);
+
+				            /**
+				             * see if this is a (non-blob)-field that wants to be saved as binary (e.g. array with binary data in them)
+				             */
+				            $write_as_binary = !!$def['save_binary'];
+
+				            // if we save binary data, wrap, mark it
+				            if($driverName === 'mssql' AND is_string($a[$field]) AND $write_as_binary)
+				            {
+					            $a[$field] = new \App\DoctrineLob($a[$field]);
+				            }
 
                     break;
                 case 'blob':
                     $a[$field] = $this->_data[$field];
 
-										// if we save nairy data, wrap, mark it
-	                  if($driverName === 'mssql' AND is_string($a[$field])) $a[$field]= new \App\DoctrineLob($a[$field]);
+		                // if we save binary data, wrap, mark it
+		                if($driverName === 'mssql' AND is_string($a[$field]))
+		                {
+			                $a[$field] = new \App\DoctrineLob($a[$field]);
+		                }
 
                     break;
                 case 'gzip':
                     $a[$field] = gzcompress($this->_data[$field],5);
 
-	                  // if we save nairy data, wrap, mark it
-	                  if($driverName === 'mssql' AND is_string($a[$field])) $a[$field] = new \App\DoctrineLob($a[$field]);
+		                // if we save binary data, wrap, mark it
+		                if($driverName === 'mssql' AND is_string($a[$field]))
+		                {
+			                $a[$field] = new \App\DoctrineLob($a[$field]);
+		                }
 
                     break;
                 case 'boolean':
