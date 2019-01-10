@@ -52,6 +52,10 @@ class Doctrine_Expression_Mssql extends Doctrine_Expression_Driver
                 return 'GETDATE()';
         }
     }
+    public function curdate()
+    {
+        return 'CAST(GETDATE() AS DATE)';
+    }
 
     /**
      * return string to call a function to get a substring inside an SQL statement
@@ -67,17 +71,24 @@ class Doctrine_Expression_Mssql extends Doctrine_Expression_Driver
     }
 
     /**
-     * Returns string to concatenate two or more string parameters
+     * locate
+     * returns the position of the first occurrence of substring $substr in string $str
      *
-     * @param string $arg1
-     * @param string $arg2
-     * @param string $values...
-     * @return string to concatenate two strings
+     * @param string $substr literal string to find
+     * @param string $str literal string
+     *
+     * @return integer
      */
-    public function concat()
+    public function locate($str, $substr, $start = null)
     {
-        $args = func_get_args();
-        return '(' . implode(' + ', $args) . ')';
+    	if(is_null($start))
+        return 'CHARINDEX(CAST(' . $substr . ' AS NVARCHAR(max)), ' . $str . ')';
+    	else
+    		return 'CHARINDEX(CAST(' . $substr . ' AS NVARCHAR(max)), ' . $str . ', ' . $start . ')';
+    }
+    public function instr($str, $substr, $start = null)
+    {
+        return $this->locate($str, $substr, $start);
     }
 
     /**
@@ -132,4 +143,32 @@ class Doctrine_Expression_Mssql extends Doctrine_Expression_Driver
 
         return 'DATEPART(' . $datepart . ', ' . $date . ')';
     }
+
+    /**
+     * Aliases IFNULL to ISNULL
+     *
+     * @param string $arg1
+     * @param string $arg2
+     *
+     * @return string
+     */
+    public function ifnull()
+    {
+        $args = func_get_args();
+
+        return 'ISNULL(' . implode(', ', $args) . ')';
+    }
+
+
+    public function trim($str)
+    {
+	    return 'LTRIM(RTRIM(' . $str . '))';
+    }
+
+	public function date_add($date, $intervalstr)
+	{
+		$m = [];
+		preg_match('~INTERVAL\s+(.+)\s+([a-zA-Z]+)$~i', trim($intervalstr), $m);
+		return "DATEADD(${m[2]}, ${m[1]}, $date)";
+	}
 }

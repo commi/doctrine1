@@ -157,4 +157,29 @@ class Doctrine_Expression_Mysql extends Doctrine_Expression_Driver
     {
         return 'SOUNDEX(' . $column . ')';
     }
+
+		/**
+		 * Aliases IIF to IF
+		 *
+		 * @return string
+		 */
+		public function iif()
+		{
+			$args = func_get_args();
+
+			return 'IF(' . implode(', ', $args) . ')';
+		}
+
+		/**
+		 * locate
+		 * returns the position of the first occurrence of substring $substr in string $str
+		 *
+		 * @param string $substr literal string to find
+		 * @param string $str    literal string
+		 * @return integer
+		 */
+		public function locate($str, $substr)
+		{
+			return 'LOCATE(' . $substr . ', ' . $str . ')';
+		}
 }

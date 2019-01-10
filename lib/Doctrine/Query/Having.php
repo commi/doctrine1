@@ -80,6 +80,12 @@ class Doctrine_Query_Having extends Doctrine_Query_Condition
      */
     final private function _parseAliases($value)
     {
+    	// split distinct
+	    if($is_distinct = preg_match('/^DISTINCT\s+/', $value))
+	    {
+		    $value = preg_replace('/^DISTINCT\s+/', '', $value);
+	    }
+
         if ( ! is_numeric($value)) {
             $a = explode('.', $value);
 
@@ -96,6 +102,9 @@ class Doctrine_Query_Having extends Doctrine_Query_Condition
                 }
             }
         }
+
+        if($is_distinct)
+        	$value = "DISTINCT $value";
 
         return $value;
     }

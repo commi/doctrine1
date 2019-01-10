@@ -161,17 +161,19 @@ class Doctrine_Formatter extends Doctrine_Connection_Module
      */
     public function quote($input, $type = null)
     {
-        if ($type == null) {
+        if($type == null)
+        {
             $type = gettype($input);
         }
-        switch ($type) {
+        switch($type)
+        {
         case 'integer':
         case 'double':
         case 'float':
         case 'bool':
         case 'decimal':
         case 'int':
-            return $input;
+	        return empty($input) ? (int)$input : $input;
         case 'array':
         case 'object':
             $input = serialize($input);

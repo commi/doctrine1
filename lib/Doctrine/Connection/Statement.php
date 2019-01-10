@@ -39,7 +39,7 @@ class Doctrine_Connection_Statement implements Doctrine_Adapter_Statement_Interf
     protected $_conn;
 
     /**
-     * @var mixed $_stmt                    PDOStatement object, boolean false or Doctrine_Adapter_Statement object
+     * @var PDOStatement|false|Doctrine_Adapter_Statement $_stmt PDOStatement object, boolean false or Doctrine_Adapter_Statement object
      */
     protected $_stmt;
 
@@ -243,14 +243,38 @@ class Doctrine_Connection_Statement implements Doctrine_Adapter_Statement_Interf
 
                 if ($params) {
                     $pos = 0;
+	                  $driverName = strtolower($this->_conn->getDriverName());
+
                     foreach ($params as $key => $value) {
                         $pos++;
                         $param = is_numeric($key) ?  $pos : $key;
-                        if (is_resource($value)) {
-                            $this->_stmt->bindParam($param, $params[$key], Doctrine_Core::PARAM_LOB);
-                        } else {
-                            $this->_stmt->bindParam($param, $params[$key]);
-                        }
+
+                        // Blob handling for SQl Server
+	                      if($driverName == 'mssql')
+		                    {
+			                    if(is_resource($value))
+			                    {
+				                    $this->_stmt->bindParam($param, $params[$key], Doctrine_Core::PARAM_LOB,0, \PDO::SQLSRV_ENCODING_BINARY);
+			                    }
+			                    /* if param is a string wrapped in the lobclass, pass as lob */
+			                    elseif(is_object($value) AND ($value instanceof \App\DoctrineLob))
+			                    {
+				                    $blob =  (string)$value;
+				                    $this->_stmt->bindParam($param, $blob, Doctrine_Core::PARAM_LOB, 0, \PDO::SQLSRV_ENCODING_BINARY);
+			                    }
+			                    else
+			                    {
+				                    $this->_stmt->bindParam($param, $params[$key]);
+			                    }
+		                    }
+		                    else
+		                    {
+			                    if(is_resource($value)) {
+				                    $this->_stmt->bindParam($param, $params[$key], Doctrine_Core::PARAM_LOB);
+			                    } else {
+				                    $this->_stmt->bindParam($param, $params[$key]);
+			                    }
+		                    }
                     }
                 }
 

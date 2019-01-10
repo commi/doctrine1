@@ -1375,8 +1375,11 @@ abstract class Doctrine_Record extends Doctrine_Record_Abstract implements Count
 
         try {
             if ( ! isset($this->_references[$fieldName])) {
+
                 if ($load) {
+
                     $rel = $this->_table->getRelation($fieldName);
+
                     $this->_references[$fieldName] = $rel->fetchRelatedFor($this);
                 } else {
                     $this->_references[$fieldName] = null;
@@ -1394,7 +1397,7 @@ abstract class Doctrine_Record extends Doctrine_Record_Abstract implements Count
                 try {
                     $value = $filter->filterGet($this, $fieldName);
                     $success = true;
-                } catch (Doctrine_Exception $e) {}
+                } catch (Doctrine_Exception $e2) {}
             }
             if ($success) {
                 return $value;
@@ -1815,6 +1818,8 @@ abstract class Doctrine_Record extends Doctrine_Record_Abstract implements Count
             $modifiedFields = $this->_modified;
         }
 
+	      $driverName = strtolower($this->_table->getConnection()->getDriverName());
+
         foreach ($modifiedFields as $field) {
             $type = $this->_table->getTypeOf($field);
 
@@ -1827,9 +1832,40 @@ abstract class Doctrine_Record extends Doctrine_Record_Abstract implements Count
                 case 'array':
                 case 'object':
                     $a[$field] = serialize($this->_data[$field]);
+
+				            $def = $this->_table->getDefinitionOf($field);
+
+				            /**
+				             * see if this is a (non-blob)-field that wants to be saved as binary (e.g. array with binary data in them)
+				             */
+				            $write_as_binary = !!$def['save_binary'];
+
+				            // if we save binary data, wrap, mark it
+				            if($driverName === 'mssql' AND is_string($a[$field]) AND $write_as_binary)
+				            {
+					            $a[$field] = new \App\DoctrineLob($a[$field]);
+				            }
+
+                    break;
+                case 'blob':
+                    $a[$field] = $this->_data[$field];
+
+		                // if we save binary data, wrap, mark it
+		                if($driverName === 'mssql' AND is_string($a[$field]))
+		                {
+			                $a[$field] = new \App\DoctrineLob($a[$field]);
+		                }
+
                     break;
                 case 'gzip':
                     $a[$field] = gzcompress($this->_data[$field],5);
+
+		                // if we save binary data, wrap, mark it
+		                if($driverName === 'mssql' AND is_string($a[$field]))
+		                {
+			                $a[$field] = new \App\DoctrineLob($a[$field]);
+		                }
+
                     break;
                 case 'boolean':
                     $a[$field] = $this->getTable()->getConnection()->convertBooleans($this->_data[$field]);
