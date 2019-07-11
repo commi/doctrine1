@@ -98,6 +98,7 @@ class Doctrine_DataDict_Mssql extends Doctrine_DataDict
             case 'int':
                 return (isset($field['unsigned']) && $field['unsigned']) ? 'BIGINT' : 'INT';
             case 'boolean':
+            case 'bool':
                 return 'BIT';
             case 'date':
                 return 'CHAR(' . strlen('YYYY-MM-DD') . ')';

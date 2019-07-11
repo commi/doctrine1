@@ -384,7 +384,7 @@ abstract class Doctrine_Connection extends Doctrine_Configurable implements Coun
      *
      * Gets the name of the instance driver
      *
-     * @return void
+     * @return string
      */
     public function getDriverName()
     {
@@ -582,7 +582,7 @@ abstract class Doctrine_Connection extends Doctrine_Configurable implements Coun
         foreach ($fields as $fieldName => $value) {
             if (in_array($fieldName, $keys)) {
                 if ($value !== null) {
-                    $condition[] = $table->getColumnName($fieldName) . ' = ?';
+                    $condition[] = $this->quoteIdentifier($table->getColumnName($fieldName)) . ' = ?';
                     $conditionValues[] = $value;
                 }
             }
