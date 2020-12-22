@@ -360,7 +360,7 @@ class Doctrine_Record_Listener_Chain extends Doctrine_Access implements Doctrine
         }
     }
 
-    public function preHydrate(Doctrine_Event $event)
+    public function preHydrate($event)
     {
         $disabled = $this->getOption('disabled');
 	
