@@ -251,22 +251,22 @@ class Doctrine_Connection_Statement implements Doctrine_Adapter_Statement_Interf
 
                         // Blob handling for SQl Server
 	                      if($driverName == 'mssql')
-		                    {
-			                    if(is_resource($value))
-			                    {
-				                    $this->_stmt->bindParam($param, $params[$key], Doctrine_Core::PARAM_LOB,0, \PDO::SQLSRV_ENCODING_BINARY);
-			                    }
-			                    /* if param is a string wrapped in the lobclass, pass as lob */
-			                    elseif(is_object($value) AND ($value instanceof \App\DoctrineLob))
-			                    {
-				                    $blob =  (string)$value;
-				                    $this->_stmt->bindParam($param, $blob, Doctrine_Core::PARAM_LOB, 0, \PDO::SQLSRV_ENCODING_BINARY);
-			                    }
-			                    else
-			                    {
-				                    $this->_stmt->bindParam($param, $params[$key]);
-			                    }
-		                    }
+	                      {
+		                      if(is_resource($value))
+		                      {
+			                      $this->_stmt->bindParam($param, $params[$key], Doctrine_Core::PARAM_LOB, 0, \PDO::SQLSRV_ENCODING_BINARY);
+		                      }
+		                      /* if param is a string wrapped in the lobclass, pass as lob */
+		                      elseif(is_object($value) AND ($value instanceof \App\DoctrineLob))
+		                      {
+			                      $params[$key] = (string)$params[$key];
+			                      $this->_stmt->bindParam($param, $params[$key], Doctrine_Core::PARAM_LOB, 0, \PDO::SQLSRV_ENCODING_BINARY);
+		                      }
+		                      else
+		                      {
+			                      $this->_stmt->bindParam($param, $params[$key]);
+		                      }
+	                      }
 		                    else
 		                    {
 			                    if(is_resource($value)) {
